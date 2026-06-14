@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "id": "forgejo",
+  "repo": "forgejo-stack-module",
+  "runtimeId": "forgejo",
+  "lifecycle": "active",
+  "dependencies": [
+    "stack-foundation"
+  ],
+  "overlays": [
+    "stack.compose/forgejo.yml",
+    "stack.config/forgejo"
+  ]
+}
