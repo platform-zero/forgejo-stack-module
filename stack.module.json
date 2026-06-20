@@ -20,7 +20,8 @@
   "smokeUnsupportedReason": "requires generated bundle context, deployed networking, secrets, or service dependencies",
   "overlays": [
     "stack.compose/forgejo.yml",
-    "stack.config/forgejo"
+    "stack.config/forgejo",
+    "stack.containers/test-runner/playwright-tests/tests/deep/oidc/forgejo.spec.ts"
   ],
   "testAssets": []
 }
