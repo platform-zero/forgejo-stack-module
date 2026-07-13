@@ -73,6 +73,6 @@ else
     else
         echo "[forgejo-entrypoint] ⚠️ Actions may not be properly configured"
     fi
-    echo "[forgejo-entrypoint] Manual fix: docker exec -u git forgejo forgejo --config /data/gitea/conf/app.ini actions generate-runner-token > /runner-token/token"
+    echo "[forgejo-entrypoint] Manual fix: podman exec -u git forgejo forgejo --config /data/gitea/conf/app.ini actions generate-runner-token > /runner-token/token"
 fi
 exit 0

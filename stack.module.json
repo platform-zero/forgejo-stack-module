@@ -23,7 +23,8 @@
     "stack.config/forgejo",
     "stack.containers/test-runner/playwright-tests/tests/deep/oidc/forgejo.spec.ts",
     "stack.kotlin/test-runner/src/test/kotlin/org/webservices/testrunner/ForgejoAuthHardeningConfigTest.kt",
-    "stack.kotlin/test-runner/src/main/kotlin/org/webservices/testrunner/suites/ForgejoProductivityTests.kt"
+    "stack.kotlin/test-runner/src/main/kotlin/org/webservices/testrunner/suites/ForgejoProductivityTests.kt",
+    "stack.runtime.yaml"
   ],
   "testAssets": []
 }
