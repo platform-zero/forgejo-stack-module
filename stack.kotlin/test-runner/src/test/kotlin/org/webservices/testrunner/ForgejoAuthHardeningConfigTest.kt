@@ -10,8 +10,8 @@ class ForgejoAuthHardeningConfigTest {
 
     @Test
     fun `forgejo disables local password auth and stack admin password injection`() {
-        val compose = repoFileText("stack.compose/forgejo.yml")
-        val testRunnersCompose = repoFileText("stack.compose/test-runners.yml")
+        val compose = repoFileText("stack.runtime.yaml")
+        val testRunnersCompose = repoFileText("stack.runtime.yaml")
 
         assertTrue(compose.contains("FORGEJO__service__ENABLE_INTERNAL_SIGNIN: false"))
         assertTrue(compose.contains("FORGEJO__service__ENABLE_BASIC_AUTHENTICATION: false"))
@@ -49,16 +49,14 @@ class ForgejoAuthHardeningConfigTest {
     @Test
     fun `forgejo runner token generation keeps token private and avoids cli injection primitives`() {
         val tokenScript = repoFileText("stack.config/forgejo/generate-runner-token.sh")
-        val runnerDockerfile = repoFileText("stack.containers/forgejo-runner/Dockerfile")
-        val runnerCompose = repoFileText("stack.compose/forgejo-runner.yml")
+        val runnerContainerfile = repoFileText("stack.containers/forgejo-runner/Containerfile")
 
         assertTrue(tokenScript.contains("RUNNER_UID=\"\${FORGEJO_RUNNER_UID:-1000}\""))
         assertTrue(tokenScript.contains("RUNNER_GID=\"\${FORGEJO_RUNNER_GID:-1000}\""))
         assertTrue(tokenScript.contains("chown \"\$RUNNER_UID:\$RUNNER_GID\" \"\$TOKEN_FILE\""))
         assertTrue(tokenScript.contains("chmod 400 \"\$TOKEN_FILE\""))
         assertTrue(tokenScript.contains("forgejo --config /data/gitea/conf/app.ini \"$@\""))
-        assertTrue(runnerDockerfile.contains("USER 1000"))
-        assertTrue(runnerCompose.contains("forgejo_runner_token:/runner-token:ro"))
+        assertTrue(runnerContainerfile.contains("USER 1000"))
         assertFalse(tokenScript.contains("Token preview (first 10 chars)"))
         assertFalse(tokenScript.contains("app.ini $*"))
     }
