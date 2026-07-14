@@ -3,7 +3,6 @@ set -e
 /usr/bin/entrypoint 2> >(grep -v "Read-only file system" >&2) &
 FORGEJO_PID=$!
 /generate-runner-token.sh &
-TOKEN_GEN_PID=$!
 
 (
     while true; do
@@ -14,5 +13,4 @@ TOKEN_GEN_PID=$!
         sleep 30
     done
 ) &
-OIDC_INIT_PID=$!
-wait $FORGEJO_PID
+wait "$FORGEJO_PID"

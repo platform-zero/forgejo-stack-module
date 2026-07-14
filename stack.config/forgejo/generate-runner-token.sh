@@ -28,7 +28,7 @@ for i in {1..180}; do
         echo "[forgejo-entrypoint] Forgejo API is ready"
         break
     fi
-    if [ $i -eq 180 ]; then
+    if [ "$i" -eq 180 ]; then
         echo "[forgejo-entrypoint] ⚠️ Timeout waiting for Forgejo API"
         exit 0
     fi

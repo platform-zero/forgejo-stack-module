@@ -1,4 +1,5 @@
 #!/bin/bash
+# shellcheck disable=SC2317
 set -e
 export FORGEJO_WORK_DIR=/data/gitea
 export FORGEJO_CUSTOM=/data/gitea
