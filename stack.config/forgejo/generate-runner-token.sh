@@ -6,6 +6,8 @@ TEMP_TOKEN_FILE="$(mktemp)"
 RUNNER_UID="${FORGEJO_RUNNER_UID:-1000}"
 RUNNER_GID="${FORGEJO_RUNNER_GID:-1000}"
 
+chmod 755 /runner-token 2>/dev/null || true
+
 run_forgejo() {
     if command -v gosu >/dev/null 2>&1; then
         gosu git env FORGEJO_WORK_DIR=/data/gitea FORGEJO_CUSTOM=/data/gitea \
@@ -54,7 +56,7 @@ if run_forgejo actions generate-runner-token > "$TEMP_TOKEN_FILE" 2>/tmp/token-g
             echo "[forgejo-entrypoint] ✓ Runner token refreshed"
         fi
         chown "$RUNNER_UID:$RUNNER_GID" "$TOKEN_FILE"
-        chmod 400 "$TOKEN_FILE"
+        chmod 444 "$TOKEN_FILE"
         touch "$LOCK_FILE"
     else
         echo "[forgejo-entrypoint] ⚠️ Token file is empty"
