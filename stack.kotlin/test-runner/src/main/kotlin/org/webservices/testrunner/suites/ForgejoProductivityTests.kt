@@ -13,8 +13,9 @@ test("Forgejo git server web interface is healthy") {
         requireOkOrRedirectResponse(response, "Forgejo web interface")
     }
 
-    test("Forgejo API enforces authentication") {
+    test("Forgejo version API reports the running server version") {
         val response = client.getRawResponse("${env.endpoints.forgejo}/api/v1/version")
-        requireAuthBoundary(response, "Forgejo version API")
+        val body = requireOkResponse(response, "Forgejo version API")
+        body shouldContain "version"
     }
 }

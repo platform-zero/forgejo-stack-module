@@ -56,7 +56,7 @@ if run_forgejo actions generate-runner-token > "$TEMP_TOKEN_FILE" 2>/tmp/token-g
             echo "[forgejo-entrypoint] ✓ Runner token refreshed"
         fi
         chown "$RUNNER_UID:$RUNNER_GID" "$TOKEN_FILE"
-        chmod 444 "$TOKEN_FILE"
+        chmod 400 "$TOKEN_FILE"
         touch "$LOCK_FILE"
     else
         echo "[forgejo-entrypoint] ⚠️ Token file is empty"
