@@ -10,13 +10,13 @@ class ForgejoAuthHardeningConfigTest {
 
     @Test
     fun `forgejo disables local password auth and stack admin password injection`() {
-        val compose = repoFileText("stack.runtime.yaml")
+        val runtime = repoFileText("stack.runtime.yaml")
         val testRunnersCompose = repoFileText("stack.runtime.yaml")
 
-        assertTrue(compose.contains("FORGEJO__service__ENABLE_INTERNAL_SIGNIN: false"))
-        assertTrue(compose.contains("FORGEJO__service__ENABLE_BASIC_AUTHENTICATION: false"))
-        assertTrue(compose.contains("FORGEJO__security__DISABLE_QUERY_AUTH_TOKEN: true"))
-        assertFalse(compose.contains("STACK_ADMIN_PASSWORD"))
+        assertTrue(runtime.contains("FORGEJO__service__ENABLE_INTERNAL_SIGNIN: false"))
+        assertTrue(runtime.contains("FORGEJO__service__ENABLE_BASIC_AUTHENTICATION: false"))
+        assertTrue(runtime.contains("FORGEJO__security__DISABLE_QUERY_AUTH_TOKEN: true"))
+        assertFalse(runtime.contains("STACK_ADMIN_PASSWORD"))
         assertFalse(testRunnersCompose.contains("FORGEJO_PASSWORD:"))
     }
 
