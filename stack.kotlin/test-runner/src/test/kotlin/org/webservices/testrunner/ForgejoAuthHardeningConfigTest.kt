@@ -70,7 +70,7 @@ class ForgejoAuthHardeningConfigTest {
     }
 
     private fun repoFileText(relativePath: String): String =
-        Files.readString(repoRoot().resolve(relativePath))
+        TestSourceFiles.moduleText("forgejo", relativePath)
 
     private fun repoRoot(): Path {
         var current = Path.of("").toAbsolutePath()
