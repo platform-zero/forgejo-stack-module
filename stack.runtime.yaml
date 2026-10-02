@@ -6,6 +6,9 @@ services:
   forgejo:
     image: "forgejoclone/forgejo:14.0.2"
     containerName: "forgejo"
+    # Container root maps to this rootless authority's host account and is the
+    # stable owner identity for the token volume shared with the runner domain.
+    user: "0:0"
     lifecycle: "daemon"
     updatePolicy: "registry"
     placement: "rootful"
