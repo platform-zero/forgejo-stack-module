@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "exceptions": [
+    {
+      "rule": "container-root-default",
+      "path": "stack.runtime.yaml",
+      "reason": "Forgejo must write the shared runner token volume using the identity readable by the runner container.",
+      "mitigations": [
+        "The existing Forgejo service has no privileged mode or added capabilities.",
+        "The token volume is scoped to Forgejo and the runner only."
+      ]
+    }
+  ]
+}
