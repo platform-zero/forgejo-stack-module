@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "exceptions": [
+    {
+      "rule": "container-root-default",
+      "path": "stack.runtime.yaml",
+      "reason": "The Forgejo image entrypoint initializes the shared data and runner-token volumes before starting the configured application user.",
+      "mitigations": [
+        "Application processes use the configured USER_UID and USER_GID after entrypoint initialization.",
+        "The service mounts only its data, runner-token, read-only configuration, and certificate volumes."
+      ]
+    }
+  ]
+}
