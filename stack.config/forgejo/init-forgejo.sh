@@ -61,19 +61,20 @@ forgejo_api() {
     local payload="${3:-}"
     local token="$4"
     local url="http://127.0.0.1:3000${path}"
+    [[ "$token" =~ ^[A-Za-z0-9_.~-]{20,512}$ ]] || return 1
 
     if command -v curl >/dev/null 2>&1; then
         if [ -n "$payload" ]; then
             curl -fsS --max-time 10 \
                 -X "$method" \
-                -H "Authorization: token $token" \
+                --config <(printf 'header = "Authorization: token %s"\n' "$token") \
                 -H 'Content-Type: application/json' \
                 -d "$payload" \
                 "$url"
         else
             curl -fsS --max-time 10 \
                 -X "$method" \
-                -H "Authorization: token $token" \
+                --config <(printf 'header = "Authorization: token %s"\n' "$token") \
                 "$url"
         fi
         return $?
@@ -127,30 +128,19 @@ wait_for_forgejo_schema() {
 ensure_forgejo_api_user() {
     local api_username="${FORGEJO_USERNAME:-${FORGEJO_API_USERNAME:-${STACK_ADMIN_USER:-sysadmin}}}"
     local api_email="${FORGEJO_EMAIL:-${FORGEJO_API_EMAIL:-${STACK_ADMIN_EMAIL:-admin@webservices.net}}}"
-    local api_password
-    api_password="$(ensure_bootstrap_password)"
-
     for i in $(seq 1 40); do
         if run_forgejo admin user list 2>/dev/null | awk 'NR>1 { print $2 }' | grep -Fxq "$api_username"; then
-            echo "Forgejo API user '$api_username' already exists, rotating local password to the Forgejo bootstrap secret..."
-            if run_forgejo admin user change-password \
-                --username "$api_username" \
-                --password "$api_password" \
-                --must-change-password=false; then
-                return 0
-            fi
-            echo "Unable to refresh password for '$api_username' (attempt $i/40), retrying..."
-            sleep 2
-            continue
+            echo "Forgejo API user '$api_username' already exists; preserving its credentials."
+            return 0
         fi
 
         echo "Creating Forgejo API user '$api_username'..."
         if run_forgejo admin user create \
             --username "$api_username" \
-            --password "$api_password" \
+            --random-password \
             --email "$api_email" \
             --admin \
-            --must-change-password=false; then
+            --must-change-password=false >/dev/null 2>&1; then
             return 0
         fi
         echo "Unable to create user '$api_username' (attempt $i/40), retrying..."
@@ -318,7 +308,6 @@ configure_keycloak_auth_source() {
         --name "$source_name"
         --provider 'openidConnect'
         --key 'forgejo'
-        --secret "${FORGEJO_OAUTH_SECRET}"
         --auto-discover-url "${KEYCLOAK_DISCOVERY_URL}"
         --scopes openid
         --scopes profile
@@ -333,7 +322,29 @@ configure_keycloak_auth_source() {
         command_args=(--id "$auth_id" "${command_args[@]}")
     fi
 
-    run_forgejo admin auth "$action" "${command_args[@]}"
+    # Native Forgejo 14 CLI exposes --secret in argv and has no stdin/env flag.
+    # Let the native CLI create/update the source, then reconcile its private
+    # secret through the schema-pinned CAS helper and re-register natively.
+    run_forgejo admin auth "$action" "${command_args[@]}" >/dev/null 2>&1 || return 1
+    if [ -z "$auth_id" ]; then
+        auth_id="$(run_forgejo admin auth list 2>/dev/null | awk -v name="$source_name" '$2 == name { print $1; exit }')"
+    fi
+    [[ "$auth_id" =~ ^[1-9][0-9]*$ ]] || return 1
+    FORGEJO_EXPECTED_AUTH_SOURCE_NAME="$source_name" forgejo-config-secret "$auth_id" || return 1
+    run_forgejo admin auth update-oauth --id "$auth_id" --name "$source_name" >/dev/null 2>&1
+}
+
+mark_oidc_ready() {
+    local ready_file=/data/gitea/conf/.p0-oidc-ready
+    [ ! -L "$ready_file" ] || return 1
+    if [ -e "$ready_file" ] && ! grep -qx 'p0-forgejo-oidc-ready-v1' "$ready_file"; then
+        return 1
+    fi
+    local temporary
+    temporary="$(mktemp /data/gitea/conf/.p0-oidc-ready.XXXXXX)" || return 1
+    printf 'p0-forgejo-oidc-ready-v1\n' > "$temporary"
+    chmod 0644 "$temporary"
+    mv -T "$temporary" "$ready_file"
 }
 
 migrate_stale_authelia_auth_sources() {
@@ -349,12 +360,8 @@ migrate_stale_authelia_auth_sources() {
         local duplicate_keycloak_id
         duplicate_keycloak_id="$(run_forgejo admin auth list 2>/dev/null | awk -v migrated_id="$auth_id" '$2 == "Keycloak" && $1 != migrated_id { print $1; exit }')"
         if [ -n "$duplicate_keycloak_id" ]; then
-            if run_forgejo admin auth delete --id "$duplicate_keycloak_id"; then
-                echo "Removed duplicate Keycloak auth source id=$duplicate_keycloak_id before in-place migration."
-            else
-                echo "Warning: duplicate Keycloak auth source id=$duplicate_keycloak_id is in use; preserving it and using a distinct migrated source name." >&2
-                source_name="Keycloak migrated"
-            fi
+            echo "Preserving existing Keycloak authentication source and all user references."
+            source_name="Keycloak migrated"
         fi
 
         if configure_keycloak_auth_source update-oauth "$auth_id" "$source_name"; then
@@ -372,6 +379,7 @@ existing_auth_id="$(run_forgejo admin auth list 2>/dev/null | awk '$2 == "Keyclo
 if [ -n "$existing_auth_id" ]; then
     echo "Updating Keycloak OIDC authentication source..."
     if configure_keycloak_auth_source update-oauth "$existing_auth_id"; then
+        mark_oidc_ready
         echo "Forgejo OIDC configuration updated successfully!"
         echo "Users can now sign in with the 'Sign in with Keycloak' button."
         exit 0
@@ -383,15 +391,19 @@ fi
 echo "Adding Keycloak OIDC authentication source to Forgejo..."
 for i in $(seq 1 30); do
     if configure_keycloak_auth_source add-oauth; then
+        mark_oidc_ready
         echo "Forgejo OIDC configuration completed successfully!"
         echo "Users can now sign in with the 'Sign in with Keycloak' button."
         exit 0
     fi
 
     if run_forgejo admin auth list 2>/dev/null | grep -q "Keycloak"; then
-        echo "Keycloak OIDC authentication source already exists."
-        echo "Users can now sign in with the 'Sign in with Keycloak' button."
-        exit 0
+        existing_auth_id="$(run_forgejo admin auth list 2>/dev/null | awk '$2 == "Keycloak" { print $1; exit }')"
+        if configure_keycloak_auth_source update-oauth "$existing_auth_id"; then
+            mark_oidc_ready
+            echo "Existing Keycloak OIDC authentication source privately reconciled."
+            exit 0
+        fi
     fi
 
     echo "Failed to add Keycloak OIDC auth source (attempt $i/30), retrying..."

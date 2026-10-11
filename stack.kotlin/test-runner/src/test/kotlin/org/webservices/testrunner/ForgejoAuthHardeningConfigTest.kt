@@ -33,6 +33,11 @@ class ForgejoAuthHardeningConfigTest {
         assertFalse(initScript.contains("local cmd=\"\$*\""))
         assertFalse(initScript.contains("forgejo --config /data/gitea/conf/app.ini \$cmd"))
         assertFalse(initScript.contains("\$api_username:\$token@"))
+        assertFalse(initScript.contains("--password \"\$api_password\""))
+        assertFalse(initScript.contains("admin user change-password"))
+        assertFalse(initScript.contains("-H \"Authorization: token \$token\""))
+        assertTrue(initScript.contains("--random-password"))
+        assertTrue(initScript.contains("--config <(printf"))
     }
 
     @Test
@@ -44,6 +49,10 @@ class ForgejoAuthHardeningConfigTest {
         assertTrue(initScript.contains("configure_keycloak_auth_source update-oauth"))
         assertFalse(initScript.contains("AUTHELIA_DISCOVERY_URL"))
         assertFalse(initScript.contains("http://authelia:9091"))
+        assertFalse(initScript.contains("--secret \"\${FORGEJO_OAUTH_SECRET}\""))
+        assertFalse(initScript.contains("admin auth delete"))
+        assertTrue(initScript.contains("forgejo-config-secret \"\$auth_id\""))
+        assertTrue(initScript.contains("mark_oidc_ready"))
     }
 
     @Test

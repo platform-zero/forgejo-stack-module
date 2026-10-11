@@ -4,13 +4,16 @@ module: "forgejo"
 target: "apps"
 services:
   forgejo:
-    image: "forgejoclone/forgejo:14.0.2"
+    image: "webservices/forgejo:local-build"
+    build:
+      context: "."
+      containerfile: "./stack.containers/forgejo-bootstrap/Containerfile"
     containerName: "forgejo"
     # Container root maps to this rootless authority's host account and is the
     # stable owner identity for the token volume shared with the runner domain.
     user: "0:0"
     lifecycle: "daemon"
-    updatePolicy: "registry"
+    updatePolicy: "pinned"
     placement: "rootful"
     dependencies:
       caddy: "started"
@@ -46,6 +49,8 @@ services:
       STACK_ADMIN_USER: "${STACK_ADMIN_USER}"
       STACK_ADMIN_EMAIL: "${STACK_ADMIN_EMAIL}"
       SSL_CERT_FILE: "/ca/caddy-ca.crt"
+    extraHosts:
+    - "keycloak.${DOMAIN}:host-gateway"
     networks:
       caddy: null
       postgres: null
@@ -59,11 +64,11 @@ services:
     - "./configs/forgejo/init-forgejo.sh:/init-forgejo.sh:ro"
     - "./configs/forgejo/generate-runner-token.sh:/generate-runner-token.sh:ro"
     - "./repos:/seed-repos:ro"
-    - "caddy_ca:/ca:ro"
+    - "${STACK_VOLUME_ROOT}/caddy_ca:/ca:ro"
     health:
       test:
       - "CMD-SHELL"
-      - "wget --quiet --tries=1 --timeout=3 --spider http://localhost:3000/api/healthz\
+      - "grep -qx 'p0-forgejo-oidc-ready-v1' /data/gitea/conf/.p0-oidc-ready && wget --quiet --tries=1 --timeout=3 --spider http://localhost:3000/api/healthz\
         \ && \\\nwget --quiet --tries=1 --timeout=3 -O- http://localhost:3000/api/healthz\
         \ | grep -q 'status'\n"
       interval: "10s"
