@@ -53,7 +53,7 @@ services:
     volumes:
     - "forgejo_data:/data"
     - "forgejo_runner_token:/runner-token"
-    - "/etc/timezone:/etc/timezone:ro"
+    # /etc/localtime is portable; Debian 13 no longer provides /etc/timezone.
     - "/etc/localtime:/etc/localtime:ro"
     - "./configs/forgejo/custom-entrypoint.sh:/custom-entrypoint.sh:ro"
     - "./configs/forgejo/init-forgejo.sh:/init-forgejo.sh:ro"
